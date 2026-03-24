@@ -13,8 +13,6 @@ body {
   padding: 20px;
 }
 
-h1 { margin-bottom: 10px; }
-
 #timer {
   font-size: 50px;
   margin: 20px;
@@ -28,19 +26,18 @@ button {
   cursor: pointer;
 }
 
-select {
+select, input {
   padding: 8px;
   border-radius: 8px;
 }
 
-ul { list-style: none; padding: 0; }
-
-.section {
-  margin-top: 30px;
+ul {
+  list-style: none;
+  padding: 0;
 }
 
-canvas {
-  margin-top: 20px;
+.section {
+  margin-top: 25px;
 }
 </style>
 </head>
@@ -67,12 +64,11 @@ canvas {
 <button onclick="reset()">리셋</button>
 
 <div class="section">
-  <h2>📅 날짜 선택</h2>
   <input type="date" id="datePicker">
 </div>
 
 <div class="section">
-  <h2>📊 기록</h2>
+  <h2>📊 공부 기록</h2>
   <ul id="log"></ul>
 </div>
 
@@ -80,39 +76,30 @@ canvas {
   <h2>총 공부시간: <span id="total">0</span>분</h2>
 </div>
 
-<div class="section">
-  <h2>📈 과목별 공부시간</h2>
-  <canvas id="chart" width="300" height="300"></canvas>
-</div>
-
 <script>
 let startTime = null;
 let timer = null;
 let elapsed = 0;
 
-// 날짜 함수
+// 오늘 날짜
 function getToday() {
   return new Date().toISOString().split('T')[0];
 }
 
-// 데이터 구조
+// 데이터 불러오기
 let data = JSON.parse(localStorage.getItem("studyData")) || {};
 
 let selectedDate = getToday();
 document.getElementById("datePicker").value = selectedDate;
 
-if (!data[selectedDate]) data[selectedDate] = [];
-
-renderAll();
-
-// 날짜 변경
+// ⭐ 날짜 바뀔 때도 렌더
 document.getElementById("datePicker").addEventListener("change", (e) => {
   selectedDate = e.target.value;
-  if (!data[selectedDate]) data[selectedDate] = [];
   renderAll();
 });
 
-// 타이머 시작
+renderAll();
+
 function start() {
   if (timer) return;
 
@@ -124,7 +111,6 @@ function start() {
   }, 1000);
 }
 
-// 정지 + 기록 저장
 function stop() {
   if (!timer) return;
 
@@ -132,9 +118,10 @@ function stop() {
   timer = null;
 
   let endTime = Date.now();
-
   let duration = Math.floor(elapsed / 60000);
-  if (duration < 1) return;
+
+  // ⭐ 이거 때문에 기록 안 보였던거임 (삭제함)
+  // if (duration < 1) return;
 
   let subject = document.getElementById("subject").value;
 
@@ -145,7 +132,6 @@ function stop() {
     duration
   };
 
-  // ⭐ 핵심: 현재 날짜 기준 저장
   if (!data[selectedDate]) data[selectedDate] = [];
   data[selectedDate].push(record);
 
@@ -157,7 +143,6 @@ function stop() {
   renderAll();
 }
 
-// 리셋
 function reset() {
   clearInterval(timer);
   timer = null;
@@ -165,7 +150,6 @@ function reset() {
   updateTimer();
 }
 
-// 타이머 표시
 function updateTimer() {
   let sec = Math.floor(elapsed / 1000);
   let h = String(Math.floor(sec / 3600)).padStart(2, '0');
@@ -175,63 +159,28 @@ function updateTimer() {
   document.getElementById("timer").innerText = `${h}:${m}:${s}`;
 }
 
-// 전체 렌더
 function renderAll() {
   renderLog();
   updateTotal();
-  drawChart();
 }
 
-// 기록 출력
 function renderLog() {
   let log = document.getElementById("log");
   log.innerHTML = "";
 
-  (data[selectedDate] || []).forEach(r => {
+  let list = data[selectedDate] || [];
+
+  list.forEach(r => {
     let li = document.createElement("li");
     li.innerText = `${r.start} ~ ${r.end} | ${r.subject} (${r.duration}분)`;
     log.appendChild(li);
   });
 }
 
-// 총 시간
 function updateTotal() {
   let total = 0;
   (data[selectedDate] || []).forEach(r => total += r.duration);
   document.getElementById("total").innerText = total;
-}
-
-// 그래프
-function drawChart() {
-  let canvas = document.getElementById("chart");
-  let ctx = canvas.getContext("2d");
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  let subjectTime = {};
-
-  (data[selectedDate] || []).forEach(r => {
-    subjectTime[r.subject] = (subjectTime[r.subject] || 0) + r.duration;
-  });
-
-  let values = Object.values(subjectTime);
-  let total = values.reduce((a, b) => a + b, 0);
-
-  if (total === 0) return;
-
-  let startAngle = 0;
-
-  values.forEach(val => {
-    let sliceAngle = (val / total) * 2 * Math.PI;
-
-    ctx.beginPath();
-    ctx.moveTo(150, 150);
-    ctx.arc(150, 150, 100, startAngle, startAngle + sliceAngle);
-    ctx.closePath();
-    ctx.fill();
-
-    startAngle += sliceAngle;
-  });
 }
 </script>
 
